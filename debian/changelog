@@ -1,3 +1,9 @@
+huayra-tpmnoti (1.0.1) unstable; urgency=medium
+
+  * Fix package arch
+
+ -- Ignacio Losiggio <iglosiggio@gmail.com>  Thu, 22 Jun 2017 16:05:34 -0300
+
 huayra-tpmnoti (1.0.0) unstable; urgency=low
 
   * Initial Release.

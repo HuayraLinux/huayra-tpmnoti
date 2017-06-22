@@ -9,7 +9,7 @@ Homepage: https://github.com/HuayraLinux/huayra-tpmnoti
 #Vcs-Browser: http://anonscm.debian.org/?p=collab-maint/huayra-tpmnoti.git;a=summary
 
 Package: huayra-tpmnoti
-Architecture: any
+Architecture: all
 Depends: ${shlibs:Depends}, ${misc:Depends}, gir1.2-notify-0.7, python-gi, python, tpmdoctor
 Description: Envía notificaciones sobre el estado del TPM de la netbook
  tpmnoti es un script que permite notificar el estado del chip TPM

@@ -1,0 +1,11 @@
+[Desktop Entry]
+Encoding=UTF-8
+Name=TPM Notifications
+Name[es]=Notificaciones del TPM
+Comment=Sends notifications about the state of the CMPC Intel Theft Deterrent chip
+Comment[es]=Envía noticiaciones sobre el estado del TPM (arranques restantes y fecha límite)
+Exec=/usr/bin/tpmnoti
+Terminal=false
+Type=Application
+Categories=Theft Deterrent
+Icon=/usr/local/pixmaps/theftdeterrent/tdlogo.png

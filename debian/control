@@ -1,15 +1,18 @@
 Source: huayra-tpmnoti
-Section: unknown
+Section: utils
 Priority: optional
 Maintainer: Ignacio Losiggio <iglosiggio@gmail.com>
 Build-Depends: debhelper (>= 9)
-Standards-Version: 3.9.5
-Homepage: <insert the upstream URL, if relevant>
+Standards-Version: 3.9.6
+Homepage: https://github.com/HuayraLinux/huayra-tpmnoti
 #Vcs-Git: git://anonscm.debian.org/collab-maint/huayra-tpmnoti.git
 #Vcs-Browser: http://anonscm.debian.org/?p=collab-maint/huayra-tpmnoti.git;a=summary
 
 Package: huayra-tpmnoti
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}
-Description: <insert up to 60 chars description>
- <insert long description, indented with spaces>
+Depends: ${shlibs:Depends}, ${misc:Depends}, gir1.2-notify-0.7, python-gi, python, tpmdoctor
+Description: Envía notificaciones sobre el estado del TPM de la netbook
+ tpmnoti es un script que permite notificar el estado del chip TPM
+ en las computadoras de Conectar Igualdad para que el usuario pueda
+ conocer la cantidad de arranques restantes y la fecha límite para
+ reconectarse con el servidor.

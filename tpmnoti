@@ -6,7 +6,6 @@
 # está en riesgo y, de estarlo, notifica al usuario del riesgo.
 # ---------------------------------------------------------------------------
 from gi.repository import Notify
-from gi.repository import Gtk
 from datetime import date, datetime
 import os
 import subprocess
@@ -25,7 +24,6 @@ def callback(notif_object, action_name, users_data, extra):
         No tengo idea que hace el parametro extra
     """
     notif_object.close()
-    Gtk.main_quit()
 
 
 def check_tpm():
@@ -116,29 +114,28 @@ def notificador(tipo, tpm_data=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]):
             3 -> MSG_DATA = Datos (parámetro -d / --data)
             else -> OK (return True)
     """
-    MSG_WARN = """<b>La netbook se encuentra en riesgo.</b>\n
-    Es necesario conectarse a la red escolar para que el agente\n
-    descarge el certificado de seguridad\n
-    <b>Fecha de expiración (AAAA-MM-DD): %s </b>\n
-    <b>Ciclos restantes: %s </b>\n
-    """ % (tpm_data[7], tpm_data[6])
+
     MSG_WARN_TITLE = 'Advertencia:'
+    MSG_WARN = """La máquina se bloqueará dentro de poco, <b>es necesario conectarse a la red escolar</b>
 
-    MSG_FAIL = "No se encontró el tpmdoctor en el PATH del sistema.\n\
-    Por favor instalar el paquete '<b>tpmdoctor</b>'\n\
-    desde el synaptic o desde línea de comando con:\n\
-    <b>sudo apt-get install tpmdoctor</b>"
+    <b>Fecha límite:</b> %s
+    <b>Arranques restantes:</b> %s""" % (tpm_data[7], tpm_data[6])
+
+    # Esto nunca debería pasar en una net, dado que tpmdoctor es dependencia
     MSG_FAIL_TITLE = 'Error'
+    MSG_FAIL = """No se encontró el tpmdoctor en el PATH del sistema.
+Por favor instalar el paquete '<b>tpmdoctor</b>' desde el synaptic o desde línea de comandos ejecutando:
+<i>sudo apt-get install tpmdoctor</i>"""
 
-    MSG_DATA = """
-    HWID:       %s\n
-    BT:         %s\n
-    S/N:        %s\n
-    Fecha:      %s\n
-    Arranques:  %s\n
-""" % (tpm_data[4], tpm_data[5], tpm_data[2],
-       tpm_data[7], tpm_data[6])
-    MSG_DATA_TITLE = 'Datos'
+    MSG_DATA_TITLE = 'Información de la máquina'
+    MSG_DATA = """<b>Fecha límite:</b> %s
+<b>Arranques restantes:</b> %s
+
+    HWID: %s
+    BT: %s
+    S/N: %s""" % (tpm_data[7], tpm_data[6], tpm_data[4],
+                  tpm_data[5], tpm_data[2])
+
     # 0 RootPubKeySHA1, 1 TDSPubKeySHA1, 2 ProvisionNum, 3 TPM_HWID,
     # 4 NIC_HWID, 5 BT, 6 BC, 7 ED, 8 Indices #, 9 Owner Set, 10 Intel root key
     # 11 ?
@@ -152,23 +149,20 @@ def notificador(tipo, tpm_data=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]):
         return True  # No hay nada que mostrar
     n.add_action(
          'el_callback',
-         'Cerrar',
+         'Entendido',
          callback,
          None,
          None
         )
     n.show()
-    # Gtk.main()
     sys.exit()
 
 
 def usage():
-    print """
-    htpmnoti [-h] [-t] [-d]
-        -h          Muestra este mensaje
-        -t  --test  Simula dispositivo en riesgo para mostrar notificador
-        -d  --data  Muestra datos extraidos con el tpmdoctor64 en notificador
-"""
+    print """htpmnoti [-h] [-t] [-d]
+    -h  --help  Muestra este mensaje
+    -t  --test  Simula dispositivo en riesgo para mostrar notificador
+    -d  --data  Muestra datos extraidos con el tpmdoctor64 en notificador"""
     return True
 
 
@@ -176,7 +170,7 @@ def main():
     tipo = 0  # tipo de llamada
     try:
         opts, args = getopt.getopt(sys.argv[1:], 'htd',
-                                   ['aiuda', 'test', 'data'])
+                                   ['help', 'test', 'data'])
         Notify.init('notificador-tpm')  # Inicializo el notificador.
         path_tpmdoctor = check_tpm()
         tpm_data = cap_tpm(path_tpmdoctor)
@@ -189,7 +183,7 @@ def main():
         usage()
         sys.exit()
     for o, a in opts:
-        if o in ('-h', '--aiuda'):
+        if o in ('-h', '--help'):
             usage()
             sys.exit()
         elif o in ('-t', '--test'):
@@ -202,6 +196,8 @@ def main():
         tipo = check_fecha(tpm_data[7])
         if tipo == 4:  # fecha OK -> check ciclos
             tipo = check_ciclos(tpm_data[6])
+            if tipo == 4: # ciclos OK -> mostrar data
+                tipo = 3
     notificador(tipo, tpm_data)
 
 

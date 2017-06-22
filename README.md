@@ -20,4 +20,4 @@ htpmnoti [-h] [-t] [-d]
 * -d  --data  Muestra datos extraidos con el tpmdoctor64 en notificador
 
 ### Proyecto original ###
-Este paquete es representativo del proyecto original de Nicolás Girogetti disponible en [BitBucket](https://bitbucket.org/lahire/huayra-tpmnotificador)
+Este paquete es representativo del [proyecto original](https://bitbucket.org/lahire/huayra-tpmnotificador) de Nicolás Girogetti

@@ -1,0 +1,209 @@
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
+# ---------------------------------------------------------------------------
+# huayra-tpm-notificador
+# Captura datos del tpm mediante tpmdoctor64, luego compara si el dispositivo
+# está en riesgo y, de estarlo, notifica al usuario del riesgo.
+# ---------------------------------------------------------------------------
+from gi.repository import Notify
+from gi.repository import Gtk
+from datetime import date, datetime
+import os
+import subprocess
+import sys
+import getopt
+
+APPNAME = 'TPMDoctor64'
+DIAS = 7  # días antes de correr riesgo
+CICLOS = 10  # ciclos antes de correr riesgo
+
+
+def callback(notif_object, action_name, users_data, extra):
+    """
+    callback(notif_object, action_name, users_data, extra):
+        Botón de cierre de la notificación
+        No tengo idea que hace el parametro extra
+    """
+    notif_object.close()
+    Gtk.main_quit()
+
+
+def check_tpm():
+    """
+    check_tpm():
+        Revisa si el tpmdoctor64 está instalado y devuelve el path
+        en donde está instalado.
+        Si el whereis no encuentra la herramienta, devuelve IndexError
+        y notifica al usuario mediante pynotify
+    """
+    try:
+        path_tpmdoctor = subprocess.check_output(['whereis', APPNAME])\
+            .split()[1]
+        # el output de whereis spliteado
+        # ['comando:', '/usr/bin/comando', '/usr/share/man/man1/comando.gz']
+        # necesitamos quedarnos con el bin (índice 1)
+    except IndexError:
+        # IndexError porque la lista  tiene 1 componente: nombre del comando
+        notificador(tipo=2)
+        sys.exit(1)
+    else:
+        return path_tpmdoctor
+
+
+def cap_tpm(camino):
+    """
+    cap_tpm(camino):
+        Captura los datos del tpmdoctor (cuyo path está en camino)
+        y los guarda/devuelve en un diccionario
+    """
+    # tpm_dump = [subprocess.check_output([camino, '-a'])]
+    # retornos = [x.split('\n') for x in tpm_dump]
+    # tpm_parse = [x.split(': ') for x in retornos[0]]
+    # tpm_data = {}
+    # for item in range(len(tpm_parse)-1):
+    #     tpm_data[tpm_parse[item][0]] = tpm_parse[item][1]
+    #     .replace(' ', '').replace('\t', '')
+    # # borro los ceros de la izquierda con precaución de los pares 00
+    # tpm_data['ProvisionNum'] = tpm_data['ProvisionNum'].replace('00', 'z')
+    # tpm_data['ProvisionNum'] = tpm_data['ProvisionNum'].replace('0', '')
+    # tpm_data['ProvisionNum'] = tpm_data['ProvisionNum'].replace('z', '0')
+    # return tpm_data
+    tpm_dump = subprocess.check_output([camino, '-s']).split(',')
+    # 0 RootPubKeySHA1, 1 TDSPubKeySHA1, 2 ProvisionNum, 3 TPM_HWID,
+    # 4 NIC_HWID, 5 BT, 6 BC, 7 ED, 8 Indices #, 9 Owner Set, 10 Intel root key
+    # 11 ?
+    tpm_dump[2] = tpm_dump[2]\
+        .replace('00', 'z').replace('0', '').replace('z', '0')
+    return tpm_dump
+
+
+def check_fecha(fecha):
+    """
+    check_fecha(fecha):
+        Revisa si la fecha actual (hoy) está cerca de la ED del tpmdoctor64
+        (fecha ya está parseada como AAAA-MM-DD desde el main)
+    """
+    hoy = date.today()  # AAAA-MM-DD
+    # fecha = datetime.date(fecha)
+    if (fecha - hoy).days <= DIAS:
+        tipo = 1
+    else:
+        tipo = 4
+    return tipo
+
+
+def check_ciclos(ciclos):
+    """
+    check_ciclos(ciclos):
+        Revisa si la cantidad de ciclos es riesgosa
+    """
+    if ciclos <= CICLOS:
+        tipo = 1
+    else:
+        tipo = 4
+    return tipo
+
+
+def notificador(tipo, tpm_data=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]):
+    """
+    notificador(tpm_data):
+        Imprime los datos del diccionario tpm_data en un pynotify.
+        El mensaje que se muestra depende del tipo que se le pase al
+        notificador.
+        Tipo:
+            1 -> MSG_WARN = En riesgo (o parámetro -t / --test)
+            2 -> MSG_FAIL = No está el TPMDoctor64
+            3 -> MSG_DATA = Datos (parámetro -d / --data)
+            else -> OK (return True)
+    """
+    MSG_WARN = """<b>La netbook se encuentra en riesgo.</b>\n
+    Es necesario conectarse a la red escolar para que el agente\n
+    descarge el certificado de seguridad\n
+    <b>Fecha de expiración (AAAA-MM-DD): %s </b>\n
+    <b>Ciclos restantes: %s </b>\n
+    """ % (tpm_data[7], tpm_data[6])
+    MSG_WARN_TITLE = 'Advertencia:'
+
+    MSG_FAIL = "No se encontró el tpmdoctor en el PATH del sistema.\n\
+    Por favor instalar el paquete '<b>tpmdoctor</b>'\n\
+    desde el synaptic o desde línea de comando con:\n\
+    <b>sudo apt-get install tpmdoctor</b>"
+    MSG_FAIL_TITLE = 'Error'
+
+    MSG_DATA = """
+    HWID:       %s\n
+    BT:         %s\n
+    S/N:        %s\n
+    Fecha:      %s\n
+    Arranques:  %s\n
+""" % (tpm_data[4], tpm_data[5], tpm_data[2],
+       tpm_data[7], tpm_data[6])
+    MSG_DATA_TITLE = 'Datos'
+    # 0 RootPubKeySHA1, 1 TDSPubKeySHA1, 2 ProvisionNum, 3 TPM_HWID,
+    # 4 NIC_HWID, 5 BT, 6 BC, 7 ED, 8 Indices #, 9 Owner Set, 10 Intel root key
+    # 11 ?
+    if tipo == 1:
+        n = Notify.Notification.new(MSG_WARN_TITLE, MSG_WARN)
+    elif tipo == 2:
+        n = Notify.Notification.new(MSG_FAIL_TITLE, MSG_FAIL)
+    elif tipo == 3:
+        n = Notify.Notification.new(MSG_DATA_TITLE, MSG_DATA)
+    else:
+        return True  # No hay nada que mostrar
+    n.add_action(
+         'el_callback',
+         'Cerrar',
+         callback,
+         None,
+         None
+        )
+    n.show()
+    # Gtk.main()
+    sys.exit()
+
+
+def usage():
+    print """
+    htpmnoti [-h] [-t] [-d]
+        -h          Muestra este mensaje
+        -t  --test  Simula dispositivo en riesgo para mostrar notificador
+        -d  --data  Muestra datos extraidos con el tpmdoctor64 en notificador
+"""
+    return True
+
+
+def main():
+    tipo = 0  # tipo de llamada
+    try:
+        opts, args = getopt.getopt(sys.argv[1:], 'htd',
+                                   ['aiuda', 'test', 'data'])
+        Notify.init('notificador-tpm')  # Inicializo el notificador.
+        path_tpmdoctor = check_tpm()
+        tpm_data = cap_tpm(path_tpmdoctor)
+        try:
+            tpm_data[7] = datetime.strptime(tpm_data[7], '%Y-%m-%d')
+        except ValueError:
+            tpm_data[7] = datetime.strptime('2099-12-31', '%Y-%m-%d')
+        tpm_data[7] = datetime.date(tpm_data[7])
+    except getopt.GetoptError:
+        usage()
+        sys.exit()
+    for o, a in opts:
+        if o in ('-h', '--aiuda'):
+            usage()
+            sys.exit()
+        elif o in ('-t', '--test'):
+            tipo = 1  # simular riesgo
+            # test
+        elif o in ('-d', '--data'):
+            tipo = 3  # mostrar data
+            # data
+    if tipo not in (1, 3):
+        tipo = check_fecha(tpm_data[7])
+        if tipo == 4:  # fecha OK -> check ciclos
+            tipo = check_ciclos(tpm_data[6])
+    notificador(tipo, tpm_data)
+
+
+if __name__ == '__main__':
+    main()

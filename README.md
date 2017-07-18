@@ -1,3 +1,5 @@
+## _Deprecado_ en favor de [huayra-tdapplet](https://github.com/HuayraLinux/huayra-tdapplet) ##
+
 # TPM-Notificador #
 
 Script que reporta al usuario mediante notificación de escritorio que el dipositivo se encuentra en riesgo de bloqueo.
